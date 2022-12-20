@@ -1,0 +1,6 @@
+devel_space: /home/mso797/Desktop/TII/INTERVIEW_ASSIGNMENT/tii_interview_docker/swaleh_ws/devel
+install: false
+install_space: /home/mso797/Desktop/TII/INTERVIEW_ASSIGNMENT/tii_interview_docker/swaleh_ws/install
+profile: default
+source_space: /home/mso797/Desktop/TII/INTERVIEW_ASSIGNMENT/tii_interview_docker/swaleh_ws/src
+workspace: /home/mso797/Desktop/TII/INTERVIEW_ASSIGNMENT/tii_interview_docker/swaleh_ws

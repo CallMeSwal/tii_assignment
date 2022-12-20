@@ -1,0 +1,49 @@
+#!/bin/bash
+#
+# script to set up ros environment variables. This should be called by .bashrc or .profile
+# so that the ros environment is loaded when bash starts. 
+#
+# The IP addresses below are specific to the robot and developer, please don't
+# set these variables in scripts that are distributed to other users through git
+# as a simple git commit could break another user's ros environment.
+
+# load main ros environment
+if [ -f /opt/ros/melodic/setup.bash ]; then
+    source /opt/ros/melodic/setup.bash
+elif [ -f /opt/ros/kinetic/setup.bash ]; then
+    source /opt/ros/kinetic/setup.bash
+elif [ -f /opt/ros/indiego/setup.bash ]; then
+    source /opt/ros/indigo/setup.bash
+fi
+
+# if a catkin workspace is setup then make sure the launch
+# files and run files are available in the ROS PATH
+echo "Learn bash programming from LinuxHint.com2222"
+if [ -f ~/catkin_ws/devel/setup.bash ]; then
+    source ~/catkin_ws/devel/setup.bash
+    echo "Learn bash programming from LinuxHint.com"
+fi
+
+if [ -f ~/catkin_ws/install/setup.bash ]; then
+    source ~/catkin_ws/install/setup.bash
+fi
+
+# ignore ROS_HOSTNAME, it only causes problems and overrides ROS_IP
+unset ROS_HOSTNAME
+
+# configure ROS IPs here
+#export ROS_MASTER_IP=192.168.1.100
+#export ROS_MASTER_URI=http://${ROS_MASTER_IP}:11311/
+#export ROS_IP=192.168.1.101
+
+## bonus alias to ssh into ros master
+
+# ROS SETUP HELPERS
+alias sr='source ~/.bashrc && rospack profile'
+alias cm='sr && rospack profile && pushd ~/catkin_ws && catkin_make && popd'
+alias cb='sr && rospack profile && pushd ~/catkin_ws && catkin build && popd'
+alias tf='cd /var/tmp && rosrun tf view_frames && okular frames.pdf &'
+export LD_LIBRARY_PATH=/usr/local/lib/:/opt/ros/melodic/lib:$LD_LIBRARY_PATH
+
+export ROS_PACKAGE_PATH=../../SWALEH/src:$ROS_PACKAGE_PATH
+

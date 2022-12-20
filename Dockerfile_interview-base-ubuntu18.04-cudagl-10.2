@@ -1,0 +1,201 @@
+#
+# TII Development Environment
+#
+
+FROM nvidia/cudagl:10.2-devel-ubuntu18.04
+LABEL maintainer="Vivek R"
+
+ENV DEBIAN_FRONTEND noninteractive
+ENV USER tii_dev
+ENV ROS_DISTRO melodic
+
+
+RUN apt-get update && apt-get -y --quiet --no-install-recommends install \
+		sudo \
+		nano \
+		net-tools \
+		iputils-* \
+		bash-completion \
+		autotools-dev \
+		dh-autoreconf \
+		bzip2 \
+		ca-certificates \
+		ccache \
+		cmake \
+		cppcheck \
+		curl \
+		dirmngr \
+		doxygen \
+		file \
+		g++ \
+		gcc \
+		gdb \
+		git \
+		gnupg \
+		gosu \
+		lcov \
+		libfreetype6-dev \
+		libgtest-dev \
+		libpng-dev \
+		lsb-release \
+		make \
+		ninja-build \
+		openjdk-8-jdk \
+		openjdk-8-jre \
+		openssh-client \
+		pkg-config \
+		python-pip \
+		python-pygments \
+		python-setuptools \
+		python-wstool \
+		locate \
+		rsync \
+		shellcheck \
+		tzdata \
+		unzip \
+		wget \
+		xsltproc \
+		zip \
+	&& apt-get -y autoremove \
+	&& apt-get clean autoclean \
+	&& rm -rf /var/lib/apt/lists/{apt,dpkg,cache,log} /tmp/* /var/tmp/*
+
+RUN python -m pip install --upgrade pip \
+	&& pip install setuptools pkgconfig wheel \
+	&& pip install argparse argcomplete coverage jinja2 empy numpy requests toml pyyaml cerberus
+
+# create $USER with id 1000 with sudo access
+RUN useradd --shell /bin/bash -u 1000 -c "" -m $USER && usermod -a -G dialout $USER && echo "$USER:$USER" | chpasswd && adduser $USER sudo
+RUN sed -i '/force_color_prompt/s/^#//g' ~/.bashrc
+RUN sed -i '/force_color_prompt/s/^#//g' /home/$USER/.bashrc
+
+# setup virtual X server
+RUN mkdir /tmp/.X11-unix && \
+	chmod 1777 /tmp/.X11-unix && \
+	chown -R root:root /tmp/.X11-unix
+ENV DISPLAY :99
+
+ENV CCACHE_UMASK=000
+ENV FASTRTPSGEN_DIR="/usr/local/bin/"
+ENV PATH="/usr/lib/ccache:$PATH"
+ENV TERM=xterm
+ENV TZ=UTC
+
+RUN echo "source /etc/profile.d/bash_completion.sh" >> /home/$USER/.bashrc
+
+# SITL UDP PORTS
+EXPOSE 14556/udp
+EXPOSE 14557/udp
+
+RUN wget --quiet http://packages.osrfoundation.org/gazebo.key -O - | apt-key add - \
+	&& sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list' \
+	&& apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654 \
+	&& apt-get update \
+	&& apt-get -y upgrade \
+	&& apt-get -y dist-upgrade \
+	&& DEBIAN_FRONTEND=$DEBIAN_FRONTEND apt-get -y --quiet --no-install-recommends install \
+		ant \
+		gstreamer1.0-plugins-bad \
+		gstreamer1.0-plugins-base \
+		gstreamer1.0-plugins-good \
+		gstreamer1.0-plugins-ugly \
+		libeigen3-dev \
+		libgazebo9-dev \
+		libgstreamer-plugins-base1.0-dev \
+		libimage-exiftool-perl \
+		libopencv-dev \
+		libxml2-utils \
+		pkg-config \
+		protobuf-compiler \
+	  	geographiclib-tools \
+		libeigen3-dev \
+		libgeographic-dev \
+		libopencv-dev \
+		python-catkin-tools \
+		python-tk \
+		python3-pip \
+		ros-$ROS_DISTRO-desktop-full \
+		ros-$ROS_DISTRO-gazebo-ros-pkgs \
+		ros-$ROS_DISTRO-mavlink \
+		ros-$ROS_DISTRO-mavros \
+		ros-$ROS_DISTRO-mavros-extras \
+		ros-$ROS_DISTRO-xacro \
+		ros-$ROS_DISTRO-tf2-ros \
+		ros-$ROS_DISTRO-rviz \
+		xvfb \
+		python-pil \
+		python-yaml \
+		libgeos-dev \
+		python-lxml \
+		libgdal-dev \
+		build-essential \
+		python-dev \
+		libjpeg-dev \
+		zlib1g-dev \
+		libfreetype6-dev \
+		python-virtualenv \
+		python-rosdep \
+	&& geographiclib-get-geoids egm96-5 \
+	&& apt-get -y autoremove \
+	&& apt-get clean autoclean \
+	&& echo "source /opt/ros/melodic/setup.bash" >> ~/.bashrc
+	# pip
+
+RUN pip install --upgrade numpy pymavlink \
+	&& pip3 install --upgrade setuptools wheel \
+	&& pip3 install --upgrade matplotlib \
+	&& rm -rf /var/lib/apt/lists/{apt,dpkg,cache,log} /tmp/* /var/tmp/*
+
+RUN pip install Shapely Pillow MapProxy uwsgi
+# ADD mapproxy.yaml /mapproxy.yaml
+
+# install MAVLink headers
+RUN git clone --depth 1 https://github.com/mavlink/c_library_v2.git /usr/local/include/mavlink/v2.0 && rm -rf /usr/local/include/mavlink/v2.0/.git 
+RUN rosdep init && su -c "rosdep update -c /home/$USER/.ros/rosdep/sources.cache" - $USER
+
+#clone and download PX4 v1.12.3
+RUN mkdir /px4 && cd /px4 && git clone https://github.com/px4/PX4-Autopilot
+RUN pip3 install --user empy packaging jinja2 pyyaml toml pyros-genmsg
+RUN locale -a
+RUN export LANG="C.UTF-8" && export LC_CTYPE=C.UTF-8 && cd /px4/PX4-Autopilot && git checkout v1.12.3 && make px4_sitl_default gazebo_iris
+
+# Catkin Env Setup
+COPY ./setup/setup.bash /home/$USER/setup.bash
+COPY ./setup/configs /home/$USER/configs
+RUN touch /home/$USER/.bashrc && cd /home/$USER && export HOME=/home/$USER && \
+	  bash setup.bash full
+
+RUN chown $USER:$USER -R /home/$USER
+
+# Some QT-Apps/Gazebo don't not show controls without this
+ENV QT_X11_NO_MITSHM 1
+
+# Use UTF8 encoding in java tools (needed to compile jMAVSim)
+ENV JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8
+
+
+ENV DEV_HOME /home/$USER
+ENV CATKIN_WS $DEV_HOME/catkin_ws
+
+RUN echo "Working Folder is:$DEV_HOME"
+
+# RUN echo "Setting up the workspace"
+RUN mkdir -p $CATKIN_WS/src
+RUN echo "$USER" | sudo apt update
+
+COPY ./scripts/ros_entrypoint.sh /usr/local/bin/ros_entrypoint.sh
+
+RUN chown -R $USER:$USER /px4
+COPY ./scripts/start_gazebo.sh /px4/start_gazebo.sh
+#RUN touch /px4/start_gazebo.sh
+#RUN echo "export LC_CTYPE=C.UTF-8 && export LANG=C.UTF-8 && export PX4_PATH=/px4/PX4-Autopilot && source $PX4_PATH/Tools/setup_gazebo.bash $PX4_PATH $PX4_PATH/build/px4_sitl_default && export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$PX4_PATH && export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$PX4_PATH/Tools/sitl_gazebo && ROS_PACKAGE_PATH=../../SWALEH/src:$ROS_PACKAGE_PATH && roslaunch px4 mavros_posix_sitl.launch vehicle:=iris" > /px4/start_gazebo.sh
+RUN echo export ROS_PACKAGE_PATH=./SWALEH/src:$ROS_PACKAGE_PATH
+RUN echo export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$PX4_PATH/Tools/sitl_gazebo
+
+RUN chmod +x /px4/start_gazebo.sh
+RUN chown $USER:$USER /px4/start_gazebo.sh
+RUN chown -R $USER:$USER /tmp
+
+
+
+ENTRYPOINT ["/usr/local/bin/ros_entrypoint.sh"]

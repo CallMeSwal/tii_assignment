@@ -1,0 +1,8 @@
+prefix=/home/mso797/Desktop/TII/INTERVIEW_ASSIGNMENT/tii_interview_docker/swaleh_ws/devel/.private/run_drone
+
+Name: run_drone
+Description: Description of run_drone
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

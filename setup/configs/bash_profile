@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# DIR SHORTCUTS
+alias downloads="cd $HOME/Downloads";
+alias catkin_ws="cd ~/catkin_ws/"
+
+# Projects
+
+# GIT ALIASES
+alias gitlog="git log --graph \
+    --abbrev-commit \
+    --decorate \
+    --date=relative \
+    --format=format:'%C(bold blue)%h%C(reset) \
+    - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' \
+    --all"
+
+# EXECUTIONAL SHORTCUTS
+alias ls='ls -lh --group-directories-first --color'
+alias la='ls -lha --color'
+alias search='apt-cache search'
+alias install='sudo apt-get install'
+alias update='sudo apt-get update'
+alias remove='sudo apt-get remove'
+alias purge='sudo apt-get purge'
+alias bashrc="cd $HOME && vim .bash_profile && cd - && source ~/.bash_profile";
+alias search="grep -nr $1 ."
+
+# ENVIRONMENTAL SETTINGS
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH
+export VISUAL=nano
+export EDITOR=nano
+
+# SHELL SETTINGS
+parse_git_branch() {
+    git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/[\1]/'
+}
+
+PS1='[\w]\[\033[1;35m\]$(parse_git_branch)\[\033[0m\] > '
